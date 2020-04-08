@@ -1,16 +1,25 @@
 import React from "react";
+
 import fs from "fs";
 import path from "path";
+
+import matter from "gray-matter";
+import marked from "marked";
+
+import Head from "next/head";
 
 // Next.js gives us two new functions for static site generation
 
 // TEMPLATE
-const Post = ({ slug, contents }) => {
+const Post = ({ slug, htmlString, data }) => {
   return (
-    <div>
-      <h1>{slug}</h1>
-      <pre>{contents}</pre>
-    </div>
+    <>
+      <Head>
+        <title>{data.title}</title>
+        <meta title="description" content={data.description} />
+      </Head>
+      <div dangerouslySetInnerHTML={{ __html: htmlString }} />
+    </>
   );
 };
 
@@ -40,14 +49,22 @@ export const getStaticProps = async ({ params: { slug } }) => {
   // read the markdown
 
   // using path.join to build the path correctly regardless of which OS you're using
-  const contents = fs.readFileSync(path.join("posts", slug + ".md")).toString();
+  const markdownAndMetadata = fs
+    .readFileSync(path.join("posts", slug + ".md"))
+    .toString();
+
+  // gray-matter handles front-matter or metadata and body seperately
+  const parsedMarkdown = matter(markdownAndMetadata);
+
+  const htmlString = marked(parsedMarkdown.content);
 
   return {
     // anything inside of props obj is passed to the component
     // objects need to be serialized or serializable... strings, objects, etc.
     props: {
       slug,
-      contents,
+      htmlString,
+      data: parsedMarkdown.data,
     },
   };
 };
